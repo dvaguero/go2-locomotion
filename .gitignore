@@ -4,4 +4,6 @@ __pycache__/
 *.egg-info/
 checkpoints/
 *.mp4
+
+external/*
 !external/.gitkeep
