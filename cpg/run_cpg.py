@@ -60,28 +60,43 @@ from oscillator import QuadrupedCPG
 # Parámetros ajustables
 # =============================================================================
 
+# VALORES DE iCEM (2026-07-23): los 6 parámetros de abajo (ALPHA, OMEGA,
+# MU, L_STEP, L_CLRNC, L_PNTR) son el óptimo encontrado por cpg/icem.py
+# contra el proxy headless (cpg/headless_sim.py, ya con piso real +
+# offset lateral). delta_x_gait estimado por el proxy: +0.4037 m en 4 s
+# de rollout (~+135 mm/s hacia adelante), el primer avance neto real que
+# logró el optimizador. PENDIENTE de validar en el simulador real con
+# GUI (unitree_mujoco.py): el proxy headless no reprodujo con fidelidad
+# total el sim real en pruebas previas. Si al correr esto el robot es
+# inestable/arrastra, los sospechosos son l_step/l_clrnc/mu, que
+# convergieron pegados a sus cotas superiores en iCEM (paso agresivo).
+
 # --- Oscilador de Hopf (cpg/oscillator.py) ---
-ALPHA = 50.0  # ganancia de convergencia de r (rad/s). Más alto = r
-# converge más rápido a MU, pero exige DT más chico para que la
-# integración (incluso RK4) siga siendo estable/precisa.
-OMEGA = 2.0 * np.pi * 1.5  # frecuencia angular de la fase (rad/s).
-# 1.5 Hz de cadencia de paso es un punto de partida razonable para un
-# trote lento del GO2; subir para caminar más rápido.
-MU = 1.0  # amplitud objetivo de r en steady-state (adimensional, ver
-# foot_mapping._step_length: L_step(r) = L_STEP * r, con r -> MU).
+ALPHA = 88.05625  # (iCEM) ganancia de convergencia de r (rad/s). Más
+# alto = r converge más rápido a MU, pero exige DT más chico para que
+# la integración (incluso RK4) siga siendo estable/precisa.
+OMEGA = 7.25977  # (iCEM) frecuencia angular de la fase (rad/s) ≈ 1.155
+# Hz de cadencia de paso (bajó desde el 1.5 Hz = 2π·1.5 inicial). Subir
+# para caminar más rápido.
+MU = 1.35528  # (iCEM) amplitud objetivo de r en steady-state
+# (adimensional, ver foot_mapping._step_length: L_step(r) = L_STEP * r,
+# con r -> MU).
 
 # --- Mapeo a task space (cpg/foot_mapping.py) ---
-# L_STEP=0.0 (experimento decisivo anterior) confirmó que el temblor y
-# la caída NO vienen de foot_mapping.py -- persistían incluso sin
-# movimiento horizontal del pie. Con kp/kd ya corregidos (ver nota en
-# KP_STAND/KD_STAND) pero el temblor todavía presente, se prueba ahora
-# con un L_STEP chico (2026-07-22) para dar el primer paso posible con
-# un ciclo conservador antes de reintroducir cualquier parámetro
-# optimizado por iCEM (que se optimizó contra headless_sim.py, no
-# validado como fiel al simulador real para estos parámetros tampoco).
-L_STEP = 0.04  # longitud de paso máxima (m) en steady-state (r=MU).
-L_CLRNC = 0.04  # altura de despegue del pie en fase swing (m).
-L_PNTR = 0.005  # penetración/asentamiento del pie en fase stance (m).
+# Antecedente: L_STEP=0.0 (experimento decisivo anterior) confirmó que
+# el temblor/caída NO venían de foot_mapping.py (persistían sin
+# movimiento horizontal del pie); el problema de fondo era el vuelco
+# lateral por y=0, ya corregido con el offset lateral (ver LEG_Y_SIGN).
+# Con eso resuelto, se pasó de un L_STEP chico conservador a los
+# valores optimizados por iCEM (2026-07-23) -- ver el bloque "VALORES
+# DE iCEM" arriba. Estos son los que hay que validar ahora en el
+# simulador real.
+L_STEP = 0.13769  # (iCEM) longitud de paso máxima (m) en steady-state
+# (r=MU). Convergió cerca del tope del rango (0.15) -> el optimizador
+# quiere paso largo; sospechoso #1 si el sim real es inestable.
+L_CLRNC = 0.07418  # (iCEM) altura de despegue del pie en fase swing (m).
+# También cerca del tope (0.08) -> levanta mucho el pie.
+L_PNTR = 0.00716  # (iCEM) penetración/asentamiento del pie en stance (m).
 H = 0.35  # altura nominal de la cadera sobre el suelo (m). Ver nota
 # sobre Z_OFF/H en el docstring del módulo: 0.35 viene de
 # cross-validar contra la pose de pie oficial de stand_go2.py, no de
